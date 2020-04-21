@@ -50,6 +50,14 @@ abate.D.df <- abate.df %>%
 ```
 
 ```{r}
+# Take a look
+ggplot(abate.df, aes(x = Abatement, y = MC, color = sector)) + 
+  geom_line() +
+  facet_wrap(~sector)
+```
+
+
+```{r}
 # Fit models
 lm.A <- lm(formula = MC ~ Abatement, data = abate.A.df)
 lm.B <- lm(formula = MC ~ Abatement, data = abate.B.df)
