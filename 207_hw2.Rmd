@@ -1,0 +1,60 @@
+---
+title: "ESM 207 Homework #2"
+author: "Pat Byrne"
+date: "4/20/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Clear global environment
+rm(list = ls()) 
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+# Attach packages
+library(tidyverse)
+library(janitor)
+library(stargazer)
+library(ggthemes)
+```
+
+
+```{r}
+# Lock and load in the data
+data.df <- read_csv('HW2_Data.csv') 
+```
+
+```{r}
+# Clean it
+abate.df <- data.df %>% 
+  pivot_longer(MC_A:MC_D, names_to = 'sector', values_to = 'MC') %>% 
+  mutate(
+    sector = case_when(
+      sector == 'MC_A' ~ 'A',
+      sector == 'MC_B' ~ 'B',
+      sector == 'MC_C' ~ 'C',
+      sector == 'MC_D' ~ 'D')) %>% 
+  mutate(
+    country = case_when(
+      sector %in% c('A','B','C') ~ 'X',
+      sector == 'D' ~ 'Y'))
+
+# Cut it up
+abate.A.df <- abate.df %>% 
+  filter(sector == 'A')
+abate.B.df <- abate.df %>% 
+  filter(sector == 'B')
+abate.C.df <- abate.df %>% 
+  filter(sector == 'C')
+abate.D.df <- abate.df %>% 
+  filter(sector == 'D')
+```
+
+```{r}
+# Fit models
+lm.A <- lm(formula = MC ~ Abatement, data = abate.A.df)
+lm.B <- lm(formula = MC ~ Abatement, data = abate.B.df)
+lm.C <- lm(formula = MC ~ Abatement, data = abate.C.df)
+lm.D <- lm(formula = MC ~ Abatement, data = abate.D.df)
+```
+
+
