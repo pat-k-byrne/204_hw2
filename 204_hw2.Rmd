@@ -60,9 +60,40 @@ ggplot(abate.df, aes(x = Abatement, y = MC, color = sector)) +
 ```{r}
 # Fit models
 lm.A <- lm(formula = MC ~ Abatement, data = abate.A.df)
-lm.B <- lm(formula = MC ~ Abatement, data = abate.B.df)
+# lm.B.2 <- lm(formula = MC ~ Abatement, data = abate.B.df)
+lm.B <- lm(formula = MC ~ I(Abatement^0.5), data = abate.B.df)
 lm.C <- lm(formula = MC ~ Abatement, data = abate.C.df)
-lm.D <- lm(formula = MC ~ Abatement, data = abate.D.df)
+lm.D <- lm(formula = MC ~ Abatement + I(Abatement^2), data = abate.D.df)
+#lm.D.2 <- lm(formula = MC ~ Abatement, data = abate.D.df)
 ```
+
+```{r}
+coef.A <- as.numeric(lm.A$coefficients) # Spot 1 is the intercept, spot 2 is coef
+coef.B <- as.numeric(lm.B$coefficients)
+coef.C <- as.numeric(lm.C$coefficients)
+coef.D <- as.numeric(lm.D$coefficients) # intercept, x, x2
+
+current.emissions <- c(170, 200, 230, 300)
+```
+
+```{r}
+curve(coef.A[2]*x - coef.A[1], 0, 150)
+curve(coef.A[2]*(current.emissions[1]-x) - coef.A[1], 0, 150)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
