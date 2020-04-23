@@ -129,6 +129,9 @@ abate.D.df <- abate.D.df %>%
     demand = coef.D[3]*((current.emissions[4] - Abatement)^2) + coef.D[2]*(current.emissions[4] - Abatement) + coef.D[1]
   ) 
 
+# DF of simmed MCAbatement
+abate.simmed.df <- tibble(abate.A.df$Abatement, abate.A.df$estimated, abate.B.df$estimated, abate.C.df$estimated, abate.D.df$estimated) 
+  rename(abate.simmed.df, Abatement = `abate.A.df$Abatement`,  MC_A_e = `abate.A.df$estimated`, MC_B_e= `abate.B.df$estimated`, MC_C_e = `abate.C.df$estimated`, MC_D_e = `abate.D.df$estimated`)
 ```
 
 ```{r}
@@ -161,22 +164,51 @@ ggplot(data = abate.D.df) +
 # 2) Compute the cost to each sector
 integrand.A <- function(x) {coef.A[2]*x + coef.A[1]}
 integral.A <- integrate(integrand.A, 0, 100)
-cost.A <- as.numeric(integral.A$value)
+cost.A.a <- as.numeric(integral.A$value)
 
 integrand.B <- function(x) {coef.B[2]*sqrt(x) + coef.B[1]}
 integral.B <- integrate(integrand.B, 0, 100)
-cost.B <- as.numeric(integral.B$value)
+cost.B.a <- as.numeric(integral.B$value)
 
 integrand.C <- function(x) {coef.C[2]*x + coef.C[1]}
 integral.C <- integrate(integrand.C, 0, 100)
-cost.C <- as.numeric(integral.C$value)
+cost.C.a <- as.numeric(integral.C$value)
 
 # 1) Compute the total cost
-cost.countryX <- cost.A + cost.B + cost.C
+cost.countryX.a <- cost.A.a + cost.B.a + cost.C.a
 
 ```
 
+##### b - tax
+```{r}
+tax <- 54.35
+A_A <- (tax - coef.A[1])/coef.A[2]
+A_B <- ((tax - coef.B[1])/coef.B[2])^2
+A_C <- (tax - coef.C[1])/coef.C[2]
 
+A_total = A_A + A_B + A_C
+
+# 2) Compute the cost to each sector
+integrand.A <- function(x) {coef.A[2]*x + coef.A[1]}
+integral.A <- integrate(integrand.A, 0, A_A)
+cost.A.b <- as.numeric(integral.A$value)
+
+integrand.B <- function(x) {coef.B[2]*sqrt(x) + coef.B[1]}
+integral.B <- integrate(integrand.B, 0, A_B)
+cost.B.b <- as.numeric(integral.B$value)
+
+integrand.C <- function(x) {coef.C[2]*x + coef.C[1]}
+integral.C <- integrate(integrand.C, 0, A_C)
+cost.C.b <- as.numeric(integral.C$value)
+
+# 1) Compute the total cost
+cost.countryX.b <- cost.A.b + cost.B.b + cost.C.b
+
+# 3) Compute tax revenue
+tax_revenue = ((current.emissions[1] - A_A) + (current.emissions[2] - A_B) + (current.emissions[3] - A_C))*tax
+```
+
+##### c - cap and trade
 
 
 
