@@ -52,8 +52,7 @@ abate.D.df <- abate.df %>%
 ```{r}
 # Take a look
 ggplot(abate.df, aes(x = Abatement, y = MC, color = sector)) + 
-  geom_line() +
-  facet_wrap(~sector)
+  geom_line() 
 ```
 
 
@@ -168,6 +167,13 @@ ggplot(data = abate.D.df) +
   geom_line(aes(x = Abatement, y = estimated), color = 'red') + 
   geom_line(aes(x = Abatement, y = demand), color = 'blue') + 
   geom_point(aes(x = Abatement, y = MC))
+
+ggplot() +
+  geom_line(data = abate.A.df, aes(x = Abatement, y = estimated)) + 
+  geom_line(data = abate.B.df, aes(x = Abatement, y = estimated), color = 'blue') +
+  geom_line(data = abate.C.df, aes(x = Abatement, y = estimated), color = 'red') 
+
+
 ```
 
 
@@ -225,7 +231,7 @@ tax_revenue = ((current.emissions[1] - A_A) + (current.emissions[2] - A_B) + (cu
 ```{r}
 # Derive an aggregate pollution demand curve equation
 # For computation:
-MWTP = 54.35
+MWTP = 54.34
 # -- Curve A -- Q_A = total pollution
 # Original: MWTP = a.A*(Qo - Q_A) + b.A
 Q_A = -(MWTP - b.A - a.A*current.emissions[1])/a.A 
@@ -238,7 +244,25 @@ Q_C = -(MWTP - b.C - a.C*current.emissions[3])/a.C
 
 Q_total = Q_A + Q_B + Q_C
 
+# 2) Compute the cost to each sector
+integrand.A <- function(x) {a.A*x + b.A}
+integral.A <- integrate(integrand.A, 0, (current.emissions[1] - Q_A))
+cost.A.c <- as.numeric(integral.A$value)
+cost.A.c <- cost.A.c - ((current.emissions[1] - 100) - Q_A)*MWTP
 
+integrand.B <- function(x) {a.B*sqrt(x) + b.B}
+integral.B <- integrate(integrand.B, 0, (current.emissions[2] - Q_B))
+cost.B.c <- as.numeric(integral.B$value)
+cost.B.c <- cost.B.c - ((current.emissions[2] - 100) - Q_B)*MWTP
+
+integrand.C <- function(x) {a.C*x + b.C}
+integral.C <- integrate(integrand.C, 0, (current.emissions[3] - Q_C))
+cost.C.c <- as.numeric(integral.C$value)
+cost.C.c <- cost.C.c - ((current.emissions[3] - 100) - Q_C)*MWTP
+
+
+# 1) Compute the total cost
+cost.countryX.c <- cost.A.c+ cost.B.c + cost.C.c
 
 
 
