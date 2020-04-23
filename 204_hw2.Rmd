@@ -107,22 +107,74 @@ MWTPollute-D = `r round(coef.D[3],3)`(`r current.emissions[4]` - $x$)$^2$ + `r r
 # Compute simmed values, MWTPollute
 abate.A.df <- abate.A.df %>% 
   mutate(
-    estimated = coef.A[2]*Abatement + coef.A[1]
-  )
+    estimated = coef.A[2]*Abatement + coef.A[1],
+    demand = coef.A[2]*(current.emissions[1] - Abatement) + coef.A[1]
+  ) 
+  
+abate.B.df <- abate.B.df %>% 
+  mutate(
+    estimated = coef.B[2]*sqrt(Abatement) + coef.B[1],
+    demand = coef.B[2]*sqrt(current.emissions[2] - Abatement) + coef.B[1]
+  ) 
 
-abate.B.df <- abate.df %>% 
-  filter(sector == 'B')
-abate.C.df <- abate.df %>% 
-  filter(sector == 'C')
-abate.D.df <- abate.df %>% 
-  filter(sector == 'D')
+abate.C.df <- abate.C.df %>% 
+  mutate(
+    estimated = coef.C[2]*Abatement + coef.C[1],
+    demand = coef.C[2]*(current.emissions[3] - Abatement) + coef.C[1]
+  ) 
 
+abate.D.df <- abate.D.df %>% 
+  mutate(
+    estimated = coef.D[3]*(Abatement^2) + coef.D[2]*Abatement + coef.D[1],
+    demand = coef.D[3]*((current.emissions[4] - Abatement)^2) + coef.D[2]*(current.emissions[4] - Abatement) + coef.D[1]
+  ) 
 
 ```
 
+```{r}
+# Plot the estimated supply and demand alongside original points
+ggplot(data = abate.A.df) +
+  geom_line(aes(x = Abatement, y = estimated), color = 'red') + 
+  geom_line(aes(x = Abatement, y = demand), color = 'blue') + 
+  geom_point(aes(x = Abatement, y = MC))
+
+ggplot(data = abate.B.df) +
+  geom_line(aes(x = Abatement, y = estimated), color = 'red') + 
+  geom_line(aes(x = Abatement, y = demand), color = 'blue') + 
+  geom_point(aes(x = Abatement, y = MC))
+
+ggplot(data = abate.C.df) +
+  geom_line(aes(x = Abatement, y = estimated), color = 'red') + 
+  geom_line(aes(x = Abatement, y = demand), color = 'blue') + 
+  geom_point(aes(x = Abatement, y = MC))
+
+ggplot(data = abate.D.df) +
+  geom_line(aes(x = Abatement, y = estimated), color = 'red') + 
+  geom_line(aes(x = Abatement, y = demand), color = 'blue') + 
+  geom_point(aes(x = Abatement, y = MC))
+```
 
 
+#### 3 
+##### a - cap on carbon 
+```{r}
+# 2) Compute the cost to each sector
+integrand.A <- function(x) {coef.A[2]*x + coef.A[1]}
+integral.A <- integrate(integrand.A, 0, 100)
+cost.A <- as.numeric(integral.A$value)
 
+integrand.B <- function(x) {coef.B[2]*sqrt(x) + coef.B[1]}
+integral.B <- integrate(integrand.B, 0, 100)
+cost.B <- as.numeric(integral.B$value)
+
+integrand.C <- function(x) {coef.C[2]*x + coef.C[1]}
+integral.C <- integrate(integrand.C, 0, 100)
+cost.C <- as.numeric(integral.C$value)
+
+# 1) Compute the total cost
+cost.countryX <- cost.A + cost.B + cost.C
+
+```
 
 
 
