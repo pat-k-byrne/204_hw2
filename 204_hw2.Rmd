@@ -171,7 +171,8 @@ ggplot(data = abate.D.df) +
 ggplot() +
   geom_line(data = abate.A.df, aes(x = Abatement, y = estimated)) + 
   geom_line(data = abate.B.df, aes(x = Abatement, y = estimated), color = 'blue') +
-  geom_line(data = abate.C.df, aes(x = Abatement, y = estimated), color = 'red') 
+  geom_line(data = abate.C.df, aes(x = Abatement, y = estimated), color = 'red') +
+  geom_line(data = abate.D.df, aes(x = Abatement, y = estimated), color = 'green')
 
 
 ```
@@ -210,21 +211,23 @@ A_total = A_A + A_B + A_C
 # 2) Compute the cost to each sector
 integrand.A <- function(x) {a.A*x + b.A}
 integral.A <- integrate(integrand.A, 0, A_A)
-cost.A.b <- as.numeric(integral.A$value)
+cost.A.b <- as.numeric(integral.A$value) + (current.emissions[1] - A_A)*tax
 
 integrand.B <- function(x) {a.B*sqrt(x) + b.B}
 integral.B <- integrate(integrand.B, 0, A_B)
-cost.B.b <- as.numeric(integral.B$value)
+cost.B.b <- as.numeric(integral.B$value) + (current.emissions[2] - A_B)*tax
 
 integrand.C <- function(x) {a.C*x + b.C}
 integral.C <- integrate(integrand.C, 0, A_C)
-cost.C.b <- as.numeric(integral.C$value)
+cost.C.b <- as.numeric(integral.C$value) + (current.emissions[3] - A_C)*tax
 
-# 1) Compute the total cost
-cost.countryX.b <- cost.A.b + cost.B.b + cost.C.b
+
 
 # 3) Compute tax revenue
 tax_revenue = ((current.emissions[1] - A_A) + (current.emissions[2] - A_B) + (current.emissions[3] - A_C))*tax
+
+# 1) Compute the total cost
+cost.countryX.b <- cost.A.b + cost.B.b + cost.C.b - tax_revenue
 ```
 
 ##### c - cap and trade
@@ -260,7 +263,6 @@ integral.C <- integrate(integrand.C, 0, (current.emissions[3] - Q_C))
 cost.C.c <- as.numeric(integral.C$value)
 cost.C.c <- cost.C.c - ((current.emissions[3] - 100) - Q_C)*MWTP
 
-
 # 1) Compute the total cost
 cost.countryX.c <- cost.A.c+ cost.B.c + cost.C.c
 
@@ -274,6 +276,52 @@ A_C + Q_C
 
 ```
 
+```{r}
+
+MWTP = 37.6
+# -- Curve A -- Q_A = total pollution
+# Original: MWTP = a.A*(Qo - Q_A) + b.A
+Q_A = -(MWTP - b.A - a.A*current.emissions[1])/a.A 
+# -- Curve B -- Q_B = total pollution
+# Original: MWTP = a.B*sqrt(Qo - Q_B) + b.B
+Q_B = -((MWTP - b.B)/a.B)^2 + current.emissions[2]
+# -- Curve C -- Q_B = total pollution
+# Original: MWTP = a.C*(Qo - Q_A) + b.C
+Q_C = -(MWTP - b.C - a.C*current.emissions[3])/a.C 
+
+Q_D = 585*.5 - sqrt(250*MWTP - 937*.5)
+
+Q_total = Q_A + Q_B + Q_C + Q_D
+
+AA = current.emissions[1] - Q_A
+AB = current.emissions[2] - Q_B
+AC = current.emissions[3] - Q_C
+AD = current.emissions[4] - Q_D
+
+integrand.A <- function(x) {a.A*x + b.A}
+integral.A <- integrate(integrand.A, 0, (current.emissions[1] - Q_A))
+cost.A.d <- as.numeric(integral.A$value)
+cost.A.d <- cost.A.d - ((current.emissions[1] - 100) - Q_A)*MWTP
+
+integrand.B <- function(x) {a.B*sqrt(x) + b.B}
+integral.B <- integrate(integrand.B, 0, (current.emissions[2] - Q_B))
+cost.B.d <- as.numeric(integral.B$value)
+cost.B.d <- cost.B.d - ((current.emissions[2] - 100) - Q_B)*MWTP
+
+integrand.C <- function(x) {a.C*x + b.C}
+integral.C <- integrate(integrand.C, 0, (current.emissions[3] - Q_C))
+cost.C.d <- as.numeric(integral.C$value)
+cost.C.d <- cost.C.d - ((current.emissions[3] - 100) - Q_C)*MWTP
+
+integrand.D <- function(x) {coef.D[3]*x^2 + coef.D[2]*x + coef.D[1]}
+integral.D <- integrate(integrand.D, 0, (current.emissions[4] - Q_D))
+cost.D.d <- as.numeric(integral.D$value)
+cost.D.d <- cost.D.d - (300 - AA - AB - AC)*MWTP
+
+# 1) Compute the total cost
+cost.countries.d <- cost.A.d + cost.B.d + cost.C.d + cost.D.d
+
+```
 
 
 
