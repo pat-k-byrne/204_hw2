@@ -60,15 +60,14 @@ ggplot(abate.df, aes(x = Abatement, y = MC, color = sector)) +
 # Fit models
 lm.A <- lm(formula = MC ~ Abatement, data = abate.A.df)
 
-# lm.B.2 <- lm(formula = MC ~ Abatement, data = abate.B.df)
 lm.B <- lm(formula = MC ~ I(Abatement^0.5), data = abate.B.df)
 
+# Fit one just to the portion where it rises off of the x axis
 abate.C.fit.df <- abate.C.df %>% 
   filter(Abatement > 30)
 lm.C <- lm(formula = MC ~ Abatement, data = abate.C.fit.df)
 
 lm.D <- lm(formula = MC ~ Abatement + I(Abatement^2), data = abate.D.df)
-#lm.D.2 <- lm(formula = MC ~ Abatement, data = abate.D.df)
 ```
 
 ```{r}
@@ -111,61 +110,56 @@ MC-D = `r round(coef.D[3],3)`$x^2$ + `r round(coef.D[2],3)`$x$ + `r round(coef.D
 
 MWTPollute-D = `r round(coef.D[3],3)`(`r current.emissions[4]` - $x$)$^2$ + `r round(coef.D[2],3)`(`r current.emissions[4]` - $x$) + `r round(coef.D[1],3)`
 ```{r}
-# Compute simmed values, MWTPollute 
-
-### === DEMAND STUFF IS WRONG === ###
+# Compute simmed values 
 abate.A.df <- abate.A.df %>% 
   mutate(
-    estimated = a.A*Abatement + b.A,
-    demand = a.A*(current.emissions[1] - Abatement) + b.A
+    estimated = a.A*Abatement + b.A
   ) 
   
 abate.B.df <- abate.B.df %>% 
   mutate(
-    estimated = a.B*sqrt(Abatement) + b.B,
-    demand = a.B*sqrt(current.emissions[2] - Abatement) + b.B
+    estimated = a.B*sqrt(Abatement) + b.B
   ) 
 
 abate.C.df <- abate.C.df %>% 
   mutate(
-    estimated = a.C*Abatement + b.C,
-    demand = a.C*(current.emissions[3] - Abatement) + b.C
+    estimated = a.C*Abatement + b.C
   ) 
 
 abate.D.df <- abate.D.df %>% 
   mutate(
-    estimated = coef.D[3]*(Abatement^2) + coef.D[2]*Abatement + coef.D[1],
-    demand = coef.D[3]*((current.emissions[4] - Abatement)^2) + coef.D[2]*(current.emissions[4] - Abatement) + coef.D[1]
+    estimated = coef.D[3]*(Abatement^2) + coef.D[2]*Abatement + coef.D[1]
   ) 
 
-# DF of simmed MCAbatement
-abate.simmed.df <- tibble(abate.A.df$Abatement, abate.A.df$estimated, abate.B.df$estimated, abate.C.df$estimated, abate.D.df$estimated) 
-  rename(abate.simmed.df, Abatement = `abate.A.df$Abatement`,  MC_A_e = `abate.A.df$estimated`, MC_B_e= `abate.B.df$estimated`, MC_C_e = `abate.C.df$estimated`, MC_D_e = `abate.D.df$estimated`)
+# Compute MWTPollute
+# You can plot all of these using the demand curves I've created
+emissions <- seq(0,250,5)
+demand.A <- a.A*(current.emissions[1] - emissions) + b.A
+demand.A.df <- tibble(emissions, demand.A)
+demand.B <- a.B*sqrt(current.emissions[2] - emissions) + b.B
+demand.B.df <- tibble(emissions, demand.B)
+demand.C <- a.C*(current.emissions[3] - emissions) + b.C
+demand.C.df <- tibble(emissions, demand.C)
+demand.D <- coef.D[3]*(current.emissions[4] - emissions)^2 + coef.D[2]*(current.emissions[4] - emissions) + coef.D[1]
+demand.D.df <- tibble(emissions, demand.D)
 ```
 
 ```{r}
-# Plot the estimated supply and demand alongside original points
-
-### === DEMAND STUFF IS WRONG === ###
-
+# Plot the estimated supply alongside original points
 ggplot(data = abate.A.df) +
   geom_line(aes(x = Abatement, y = estimated), color = 'red') + 
-  geom_line(aes(x = Abatement, y = demand), color = 'blue') + 
   geom_point(aes(x = Abatement, y = MC))
 
 ggplot(data = abate.B.df) +
   geom_line(aes(x = Abatement, y = estimated), color = 'red') + 
-  geom_line(aes(x = Abatement, y = demand), color = 'blue') + 
   geom_point(aes(x = Abatement, y = MC))
 
 ggplot(data = abate.C.df) +
   geom_line(aes(x = Abatement, y = estimated), color = 'red') + 
-  geom_line(aes(x = Abatement, y = demand), color = 'blue') + 
   geom_point(aes(x = Abatement, y = MC))
 
 ggplot(data = abate.D.df) +
   geom_line(aes(x = Abatement, y = estimated), color = 'red') + 
-  geom_line(aes(x = Abatement, y = demand), color = 'blue') + 
   geom_point(aes(x = Abatement, y = MC))
 
 ggplot() +
@@ -173,8 +167,6 @@ ggplot() +
   geom_line(data = abate.B.df, aes(x = Abatement, y = estimated), color = 'blue') +
   geom_line(data = abate.C.df, aes(x = Abatement, y = estimated), color = 'red') +
   geom_line(data = abate.D.df, aes(x = Abatement, y = estimated), color = 'green')
-
-
 ```
 
 
@@ -196,16 +188,19 @@ cost.C.a <- as.numeric(integral.C$value)
 
 # 1) Compute the total cost
 cost.countryX.a <- cost.A.a + cost.B.a + cost.C.a
-
 ```
 
 ##### b - tax
 ```{r}
+# Computing the tax 
+# We replace the MCAbatement with the tax - sectors will abate up to the point that doing so becomes more expensive than emitting
+# Iterate this chunk with different taxes until A_total is at least 300
 tax <- 54.35
 A_A <- (tax - b.A)/a.A
 A_B <- ((tax - b.B)/a.B)^2
 A_C <- (tax - b.C)/a.C
 
+# Total abatement - must be greater than 300 tons
 A_total = A_A + A_B + A_C
 
 # 2) Compute the cost to each sector
@@ -221,8 +216,6 @@ integrand.C <- function(x) {a.C*x + b.C}
 integral.C <- integrate(integrand.C, 0, A_C)
 cost.C.b <- as.numeric(integral.C$value) + (current.emissions[3] - A_C)*tax
 
-
-
 # 3) Compute tax revenue
 tax_revenue = ((current.emissions[1] - A_A) + (current.emissions[2] - A_B) + (current.emissions[3] - A_C))*tax
 
@@ -230,11 +223,12 @@ tax_revenue = ((current.emissions[1] - A_A) + (current.emissions[2] - A_B) + (cu
 cost.countryX.b <- cost.A.b + cost.B.b + cost.C.b - tax_revenue
 ```
 
+
 ##### c - cap and trade
 ```{r}
 # Derive an aggregate pollution demand curve equation
-# For computation:
-MWTP = 54.34
+# Iterate this chunk with different MWTPs (MWTPollute) until Q_total is less than 300 tons
+MWTP = 54.35
 # -- Curve A -- Q_A = total pollution
 # Original: MWTP = a.A*(Qo - Q_A) + b.A
 Q_A = -(MWTP - b.A - a.A*current.emissions[1])/a.A 
@@ -245,6 +239,7 @@ Q_B = -((MWTP - b.B)/a.B)^2 + current.emissions[2]
 # Original: MWTP = a.C*(Qo - Q_A) + b.C
 Q_C = -(MWTP - b.C - a.C*current.emissions[3])/a.C 
 
+# Total emissions - must be less than 300 tons
 Q_total = Q_A + Q_B + Q_C
 
 # 2) Compute the cost to each sector
@@ -265,19 +260,12 @@ cost.C.c <- cost.C.c - ((current.emissions[3] - 100) - Q_C)*MWTP
 
 # 1) Compute the total cost
 cost.countryX.c <- cost.A.c+ cost.B.c + cost.C.c
-
-
-
-
-A_A + Q_A
-A_B + Q_B
-A_C + Q_C
-
-
 ```
 
 ```{r}
-
+# We're just going to repeat the same as in the chunk above but with Sector D and total allowable emissions of 600 tons
+# Note that we're overwriting the variables from the previous chunk in this one because Pat is lazy - might have to change for 
+# Iterate this chunk with different MWTPs (MWTPollute) until Q_total is less than 600 tons
 MWTP = 37.6
 # -- Curve A -- Q_A = total pollution
 # Original: MWTP = a.A*(Qo - Q_A) + b.A
@@ -288,9 +276,10 @@ Q_B = -((MWTP - b.B)/a.B)^2 + current.emissions[2]
 # -- Curve C -- Q_B = total pollution
 # Original: MWTP = a.C*(Qo - Q_A) + b.C
 Q_C = -(MWTP - b.C - a.C*current.emissions[3])/a.C 
-
+# Solved for Q_D with wolframalpha.com 
 Q_D = 585*.5 - sqrt(250*MWTP - 937*.5)
 
+# Total emissions - must be less than 600 tons
 Q_total = Q_A + Q_B + Q_C + Q_D
 
 AA = current.emissions[1] - Q_A
@@ -320,7 +309,6 @@ cost.D.d <- cost.D.d - (300 - AA - AB - AC)*MWTP
 
 # 1) Compute the total cost
 cost.countries.d <- cost.A.d + cost.B.d + cost.C.d + cost.D.d
-
 ```
 
 
