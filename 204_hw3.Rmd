@@ -1,0 +1,250 @@
+---
+title: "ESM 207 Homework #2"
+author: "Pat Byrne"
+date: "4/20/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Clear global environment
+rm(list = ls()) 
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+# Attach packages
+library(tidyverse)
+library(janitor)
+library(stargazer)
+library(ggthemes)
+```
+
+
+```{r}
+# Lock and load in the data
+data.df <- read_csv('Homework 3 Data.csv') 
+```
+
+```{r}
+mwtpl <- data.df$Price_Dollars
+mwtph <- data.df$Price_Dollars
+ql <- data.df$Q_Low_Gallons
+qh <- data.df$Q_High_Gallons
+```
+
+```{r}
+plot(x = ql, y = mwtpl, xlim = c(0,500000), ylim = c(0,13)) 
+plot(x = qh, y = mwtph, xlim = c(0,500000), ylim = c(0,13))
+```
+
+```{r}
+# In this chunk, I make a data frame for high and low income consumers, use those data frames to fit a linear model for each consumer type, and extract the coefficients of their demand curves
+low.df <- tibble(MWTP_L = mwtpl, Q_L = ql)
+lm.low <- lm(formula = MWTP_L ~ Q_L, data = low.df)
+
+coef <- as.numeric(lm.low$coefficients) # Spot 1 is the intercept, spot 2 is coef
+b_L <- coef[1]
+a_L <- coef[2] 
+
+
+high.df <- tibble(MWTP_H = mwtph, Q_H = qh)
+lm.high <- lm(formula = MWTP_H ~ Q_H, data = high.df)
+
+coef <- as.numeric(lm.high$coefficients) # Spot 1 is the intercept, spot 2 is coef
+b_H <- coef[1]
+a_H <- coef[2]
+```
+
+```{r}
+# In this chunk I calculate the predicted willingness to pay for a given quantity for each consumer set and then graph them
+low.df <- low.df %>% 
+  mutate(
+    MWTP_predict = b_L + a_L*Q_L
+  )
+
+high.df <- high.df %>% 
+  mutate(
+    MWTP_predict = b_H + a_H*Q_H
+  )
+
+ggplot() +
+  geom_point(data = low.df, aes(x = Q_L, y = MWTP_L), color = 'red') + 
+  geom_line(data=low.df, aes(x = Q_L, y = MWTP_predict), color = 'red', lty = 2) + 
+  geom_point(data = high.df, aes(x = Q_H, y = MWTP_H), color = 'blue') + 
+  geom_line(data= high.df, aes(x = Q_H, y = MWTP_predict), color = 'blue', lty = 2) +
+  theme_tufte()
+```
+
+Say we have two linear demand curves of the following form:
+For lower income consumers:
+$P = b_L + a_L*Q_L$
+Then, $Q_L = \frac{P - b_L}{a_L}$
+For higher income consumers:
+$P = b_H + a_H*Q_H$
+Then, $Q_H = \frac{P - b_H}{a_H}$
+
+Aggregate Daily Demand Curve = $Q_L + Q_H$
+If Q < $\frac{b_L - b_H}{a_H}$  then P =  $b_H - a_H*Q$
+If Q >= `r round(((b_L - b_H)/a_H),2)`  then P = $\frac{a_H * a_L}{a_h + a_L}*Q + \frac{a_H}{a_H + a_L}*b_L + \frac{a_L}{a_h + a_L}*b_H$
+
+Supply Curve:
+$P = \frac{P_{eq}}{Q_{eq}}*Q_T$ where $P_{eq}$ is given and $Q_{eq}$ is found by calculating $Q_H + Q_L$ at $P_{eq}$. We know the intercept is 0, and the slope is just $\frac{rise}{run}$
+
+## Question 1.
+```{r}
+# From the "following stylized facts," we know that P_eq = $3.00
+P_eq = 3
+Q_L = (P_eq - b_L)/a_L
+Q_H = (P_eq - b_H)/a_H
+Q_eq = Q_H + Q_L
+
+# Benefit to producers:
+integrand.producers <- function(x) {(P_eq/Q_eq)*x}
+integral.producers <- integrate(integrand.producers, 0, Q_eq)
+benefit.producers.1 <- (P_eq*Q_eq) - as.numeric(integral.producers$value)
+
+# Benefit to consumers (most easily found by doing each separately and then adding - THIS IS THE ANSWER TO QUESTION 2.):
+integrand.low <- function(x) {b_L + a_L*x}
+integral.low <- integrate(integrand.low, 0, Q_L)
+benefit.low <- as.numeric(integral.low$value) - P_eq*Q_L
+
+integrand.high <- function(x) {b_H + a_H*x}
+integral.high <- integrate(integrand.high, 0, Q_H)
+benefit.high <- as.numeric(integral.high$value) - P_eq*Q_H
+
+benefit.consumers.1 = benefit.low + benefit.high
+
+# Environmental costs: $1.50/gal locally, $0.50/gal globally
+env.cost.local.1 = Q_eq*1.5
+env.cost.global.1 = Q_eq*0.5
+
+```
+
+## Question 3.
+The equation for the supply curve has changed, and is now $P = \frac{P_{eq}}{Q_{eq}}*Q_T + 1$ We must now solve for the new $P_{eq}$ to be plugged in below as P_eq.2
+```{r}
+# 
+t = 1
+Q_eq.2 = (  (a_H/(a_H + a_L)*b_L) + (a_L/(a_H + a_L)*b_H) - t ) / ( (P_eq/Q_eq) -  (a_H*a_L)/(a_H + a_L)  )
+P_eq.2 = (P_eq/Q_eq)*Q_eq.2 + t
+Q_L.2 = (P_eq.2 - b_L)/a_L
+Q_H.2 = (P_eq.2 - b_H)/a_H
+
+
+
+# Benefit to producers:
+integrand.producers <- function(x) {(P_eq/Q_eq)*x + t}
+integral.producers <- integrate(integrand.producers, 0, Q_eq.2)
+benefit.producers.2 <- (P_eq.2*Q_eq.2) - as.numeric(integral.producers$value)
+
+# Benefit to consumers (most easily found by doing each separately and then adding - THIS IS THE ANSWER TO QUESTION 2.):
+integrand.low <- function(x) {b_L + a_L*x}
+integral.low <- integrate(integrand.low, 0, Q_L.2)
+benefit.low.2 <- as.numeric(integral.low$value) - P_eq.2*Q_L.2
+
+integrand.high <- function(x) {b_H + a_H*x}
+integral.high <- integrate(integrand.high, 0, Q_H.2)
+benefit.high.2 <- as.numeric(integral.high$value) - P_eq.2*Q_H.2
+
+benefit.consumers.2 = benefit.low.2 + benefit.high.2
+
+# Environmental costs: $1.50/gal locally, $0.50/gal globally
+env.cost.local.2 = Q_eq.2*1.5
+env.cost.global.2 = Q_eq.2*0.5
+
+tax_revenue = Q_eq.2*t
+
+```
+
+## Question 4.
+```{r}
+# Here's where we get funky. We're going to rerun the previous chunk multiple times according to the stipulations of question 4, with a different value of the tax each time
+
+consumption.proportion.low = Q_L/Q_eq
+p.low <- consumption.proportion.low
+
+consumption.proportion.high = Q_H/Q_eq
+p.high <- consumption.proportion.high
+
+
+taxes <- seq(0,5, by = 0.5)
+gas.produced <- c()
+gas.price <- c()
+welfare.low <- c()
+welfare.high <- c()
+welfare.producers <- c()
+
+for (i in 1:length(taxes)) {
+  Q.eq = (  (a_H/(a_H + a_L)*b_L) + (a_L/(a_H + a_L)*b_H) - taxes[i] ) / ( (P_eq/Q_eq) -  (a_H*a_L)/(a_H + a_L)  )
+  P.eq = (P_eq/Q_eq)*Q.eq + taxes[i]
+  
+  gas.produced[i] <- Q.eq
+  gas.price[i] <- P.eq
+  
+  Q.L = (P.eq - b_L)/a_L
+  Q.H = (P.eq - b_H)/a_H
+  
+  # Producer welfare
+  integrand.producers <- function(x) {(P_eq/Q_eq)*x + taxes[i]}
+  integral.producers <- integrate(integrand.producers, 0, Q.eq)
+  welfare.producers[i] <- (P.eq*Q.eq) - as.numeric(integral.producers$value)
+  
+  # Tax revenue
+  tax_revenue = Q.eq*taxes[i]
+  
+  # Local environmental damage
+  local_damage = Q.eq*1.5
+  
+  # High income welfare
+  integrand.high <- function(x) {b_H + a_H*x}
+  integral.high <- integrate(integrand.high, 0, Q.H)
+  welfare.high[i] <- as.numeric(integral.high$value) - P.eq*Q.H + tax_revenue*p.high
+  
+  # Low income welfare
+  integrand.low <- function(x) {b_L + a_L*x}
+  integral.low <- integrate(integrand.low, 0, Q.L)
+  welfare.low[i] <- as.numeric(integral.low$value) - P.eq*Q.L + tax_revenue*p.low - local_damage
+}
+
+results.question.4 <- tibble(taxes, gas.produced, gas.price, welfare.producers, welfare.high, welfare.low)
+
+```
+
+## Question 5.
+```{r}
+# The difference between this question and question 1. is that b_L and b_H are both divided by two
+Q_eq.5 = (  (a_H/(a_H + a_L)*(b_L*0.5)) + (a_L/(a_H + a_L)*(b_H*0.5)) ) / ( (P_eq/Q_eq) -  (a_H*a_L)/(a_H + a_L)  )
+P_eq.5 = (P_eq/Q_eq)*Q_eq.5 # Gas Price
+Q_L.5 = (P_eq.5 - b_L*0.5)/a_L # Low income consumption
+Q_H.5 = (P_eq.5 - b_H*0.5)/a_H # High income consumption
+
+# Compare these two numbers to those found in question 1.
+env.cost.local.5 = Q_eq.5*1.5
+env.cost.global.5 = Q_eq.5*0.5
+
+
+```
+
+## Question 6.
+```{r}
+# We iterate this chunk with different values of t until env.cost.local.6 - env.cost.local.5 is 0
+t = 7.29985
+Q_eq.6 = (  (a_H/(a_H + a_L)*b_L) + (a_L/(a_H + a_L)*b_H) - t ) / ( (P_eq/Q_eq) -  (a_H*a_L)/(a_H + a_L)  )
+
+env.cost.local.6 = Q_eq.6*1.5
+
+local.damage.diff = env.cost.local.6 - env.cost.local.5
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
